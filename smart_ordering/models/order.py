@@ -1,4 +1,5 @@
 from odoo import models, fields
+from odoo.tools import html2plaintext
 
 
 class SmartOrder(models.Model):
@@ -7,7 +8,7 @@ class SmartOrder(models.Model):
     _description = 'Smart Order'
     _rec_name = 'name'
 
-    unique_sale_order = models.Constraint(
+    _unique_sale_order = models.Constraint(
         'UNIQUE(sale_order_id)',
         'A sale order can only be linked to one smart order.',
     )
@@ -15,6 +16,7 @@ class SmartOrder(models.Model):
     name = fields.Char(string='Subject', required=True)
     sender_email = fields.Char(string='Sender', readonly=True)
     email_body = fields.Text(string='Order Content', readonly=True)
+    received_at = fields.Datetime(string='Received At', readonly=True)
     status = fields.Selection([
         ('pending', 'Pending'),
         ('extracted', 'Extracted'),
@@ -30,3 +32,13 @@ class SmartOrder(models.Model):
         readonly=True,
         ondelete='set null',
     )
+
+    def message_new(self, msg_dict, custom_values=None):
+        if custom_values is None:
+            custom_values = {}
+        custom_values.update({
+            'sender_email': msg_dict.get('email_from', ''),
+            'email_body': html2plaintext(msg_dict.get('body', '')).strip(),
+            'received_at': msg_dict.get('date'),
+        })
+        return super().message_new(msg_dict, custom_values)
