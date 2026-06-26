@@ -23,6 +23,7 @@ class SmartOrder(models.Model):
         ('pending', 'Pending'),
         ('extracted', 'Extracted'),
         ('pushed', 'Pushed'),
+        ('skipped', 'Skipped'),
         ('failed', 'Failed'),
     ], string='Status', default='pending', required=True, tracking=True)
     extracted_json = fields.Text(string='Extracted Data', readonly=True)
@@ -44,6 +45,57 @@ class SmartOrder(models.Model):
             'received_at': msg_dict.get('date'),
         })
         return super().message_new(msg_dict, custom_values)
+
+    def _run_pipeline(self):
+        server = self.env['fetchmail.server'].search([
+            ('object_id.model', '=', 'smart.order')
+        ], limit=1)
+        if server:
+            server.fetch_mail()
+        self.search([('status', '=', 'pending')])._run_extraction()
+        self.search([('status', '=', 'extracted')])._push_to_erp()
+
+    def _push_to_erp(self):
+        for record in self:
+            try:
+                extracted = json.loads(record.extracted_json)
+                if not extracted.get('line_items'):
+                    record.sudo().write({
+                        'status': 'skipped',
+                        'error_message': 'No items extracted',
+                    })
+                    continue
+                partner = self.env['res.partner'].sudo().search(
+                    [('email', '=', record.sender_email)], limit=1
+                )
+                if not partner:
+                    partner = self.env['res.partner'].sudo().create({
+                        'name': extracted.get('client_name') or record.sender_email,
+                        'email': record.sender_email,
+                        'customer_rank': 1,
+                    })
+                order = self.env['sale.order'].sudo().create({
+                    'partner_id': partner.id,
+                    'origin': f'Smart Order #{record.id}',
+                    'user_id': record.create_uid.id,
+                })
+                for item in extracted.get('line_items', []):
+                    self.env['sale.order.line'].sudo().create({
+                        'order_id': order.id,
+                        'name': item.get('description', ''),
+                        'product_uom_qty': item.get('quantity') or 0,
+                        'price_unit': 0,
+                    })
+                record.sudo().write({
+                    'sale_order_id': order.id,
+                    'status': 'pushed',
+                    'error_message': False,
+                })
+            except Exception as e:
+                record.sudo().write({
+                    'status': 'failed',
+                    'error_message': str(e),
+                })
 
     def _run_extraction(self):
         api_key = self.env['ir.config_parameter'].sudo().get_param('smart_ordering.groq_api_key')
