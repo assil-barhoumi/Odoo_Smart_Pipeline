@@ -1,5 +1,7 @@
+import json
 from odoo import models, fields
 from odoo.tools import html2plaintext
+from odoo.addons.smart_ordering.utils.llm_utils import extract_order
 
 
 class SmartOrder(models.Model):
@@ -42,3 +44,20 @@ class SmartOrder(models.Model):
             'received_at': msg_dict.get('date'),
         })
         return super().message_new(msg_dict, custom_values)
+
+    def _run_extraction(self):
+        api_key = self.env['ir.config_parameter'].sudo().get_param('smart_ordering.groq_api_key')
+        for record in self:
+            try:
+                result = extract_order(record.email_body, api_key)
+                record.sudo().write({
+                    'extracted_json': json.dumps(result),
+                    'confidence': result.get('confidence', 0.0),
+                    'status': 'extracted',
+                    'error_message': False,
+                })
+            except Exception as e:
+                record.sudo().write({
+                    'status': 'failed',
+                    'error_message': str(e),
+                })
