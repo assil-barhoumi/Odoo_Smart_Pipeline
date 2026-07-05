@@ -1,7 +1,11 @@
 import json
+import logging
+
 from odoo import models, fields
-from odoo.tools import html2plaintext
 from odoo.addons.smart_ordering.utils.llm_utils import extract_order
+from odoo.addons.smart_ordering.utils.gmail_utils import acquire_emails
+
+_logger = logging.getLogger(__name__)
 
 
 class SmartOrder(models.Model):
@@ -36,22 +40,14 @@ class SmartOrder(models.Model):
         ondelete='set null',
     )
 
-    def message_new(self, msg_dict, custom_values=None):
-        if custom_values is None:
-            custom_values = {}
-        custom_values.update({
-            'sender_email': msg_dict.get('email_from', ''),
-            'email_body': html2plaintext(msg_dict.get('body', '')).strip(),
-            'received_at': msg_dict.get('date'),
-        })
-        return super().message_new(msg_dict, custom_values)
+    def _acquire_emails(self):
+        acquire_emails(self.env)
 
     def _run_pipeline(self):
-        server = self.env['fetchmail.server'].search([
-            ('object_id.model', '=', 'smart.order')
-        ], limit=1)
-        if server:
-            server.fetch_mail()
+        try:
+            self._acquire_emails()
+        except Exception as e:
+            _logger.error('smart_ordering: acquisition failed: %s', e)
         self.search([('status', '=', 'pending')])._run_extraction()
         self.search([('status', '=', 'extracted')])._push_to_erp()
 
