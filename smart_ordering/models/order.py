@@ -4,6 +4,8 @@ import logging
 from odoo import models, fields
 from odoo.addons.smart_ordering.utils.llm_utils import extract_order
 from odoo.addons.smart_ordering.utils.gmail_utils import acquire_emails
+from odoo.addons.smart_ordering.utils.outlook_utils import acquire_emails_outlook
+
 
 _logger = logging.getLogger(__name__)
 
@@ -23,6 +25,10 @@ class SmartOrder(models.Model):
     sender_email = fields.Char(string='Sender', readonly=True)
     email_body = fields.Text(string='Order Content', readonly=True)
     received_at = fields.Datetime(string='Received At', readonly=True)
+    source = fields.Selection([
+        ('gmail', 'Gmail'),
+        ('outlook', 'Outlook'),
+    ], string='Source', readonly=True)
     status = fields.Selection([
         ('pending', 'Pending'),
         ('extracted', 'Extracted'),
@@ -41,7 +47,14 @@ class SmartOrder(models.Model):
     )
 
     def _acquire_emails(self):
-        acquire_emails(self.env)
+        try:
+            acquire_emails(self.env)
+        except Exception as e:
+            _logger.error('smart_ordering: Gmail acquisition failed: %s', e)
+        try:
+            acquire_emails_outlook(self.env)
+        except Exception as e:
+            _logger.error('smart_ordering: Outlook acquisition failed: %s', e)
 
     def _run_pipeline(self):
         try:
