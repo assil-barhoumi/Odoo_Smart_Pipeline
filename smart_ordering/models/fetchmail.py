@@ -18,3 +18,4 @@ class FetchmailServer(models.Model):
                 return len(connection._unread_messages)
             connection.check_unread_messages = folder_check
         return connection
+    

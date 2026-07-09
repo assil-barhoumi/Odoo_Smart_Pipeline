@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="smart_order_list_view" model="ir.ui.view">
+        <field name="name">smart.order.list</field>
+        <field name="model">smart.order</field>
+        <field name="arch" type="xml">
+            <list string="Smart Orders">
+                <field name="name"/>
+                <field name="sender_email"/>
+                <field name="source" widget="badge"
+                    decoration-warning="source == 'gmail'"
+                    decoration-info="source == 'outlook'"/>
+                <field name="received_at"/>
+                <field name="confidence"/>
+                <field name="status" widget="badge"
+                    decoration-success="status == 'pushed'"
+                    decoration-warning="status in ('pending', 'extracted')"
+                    decoration-danger="status == 'failed'"
+                    decoration-muted="status == 'skipped'"/>
+                <field name="sale_order_id" optional="show"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="smart_order_form_view" model="ir.ui.view">
+        <field name="name">smart.order.form</field>
+        <field name="model">smart.order</field>
+        <field name="arch" type="xml">
+            <form string="Smart Order">
+                <header>
+                    <button name="action_run_extraction" string="Run Extraction"
+                        type="object" class="btn-primary"
+                        invisible="status not in ('pending', 'failed')"/>
+                    <button name="action_push_to_erp" string="Push to ERP"
+                        type="object" class="btn-primary"
+                        invisible="status != 'extracted'"/>
+                    <button name="action_reset_to_pending" string="Reset to Pending"
+                        type="object"
+                        invisible="status != 'failed'"/>
+                    <field name="status" widget="statusbar"
+                        statusbar_visible="pending,extracted,pushed"/>
+                </header>
+                <sheet>
+                    <group>
+                        <group string="Email">
+                            <field name="name" string="Subject"/>
+                            <field name="sender_email"/>
+                            <field name="source"/>
+                            <field name="received_at"/>
+                            <field name="message_id"/>
+                        </group>
+                        <group string="Processing">
+                            <field name="confidence" widget="progressbar"/>
+                            <field name="sale_order_id"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Email Body">
+                            <field name="email_body" widget="text" readonly="1" nolabel="1"/>
+                        </page>
+                        <page string="Extracted Data">
+                            <field name="extracted_json" widget="text" readonly="1" nolabel="1"/>
+                        </page>
+                        <page string="Error" invisible="not error_message">
+                            <field name="error_message" widget="text" readonly="1" nolabel="1"/>
+                        </page>
+                    </notebook>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="smart_order_action" model="ir.actions.act_window">
+        <field name="name">Smart Orders</field>
+        <field name="res_model">smart.order</field>
+        <field name="view_mode">list,form</field>
+        <field name="context">{'search_default_pending': 1}</field>
+    </record>
+
+    <record id="smart_order_search_view" model="ir.ui.view">
+        <field name="name">smart.order.search</field>
+        <field name="model">smart.order</field>
+        <field name="arch" type="xml">
+            <search string="Smart Orders">
+                <field name="name" string="Subject"/>
+                <field name="sender_email" string="Sender"/>
+                <filter name="pending" string="Pending" domain="[('status', '=', 'pending')]"/>
+                <filter name="extracted" string="Extracted" domain="[('status', '=', 'extracted')]"/>
+                <filter name="pushed" string="Pushed" domain="[('status', '=', 'pushed')]"/>
+                <filter name="failed" string="Failed" domain="[('status', '=', 'failed')]"/>
+                <separator/>
+                <filter name="gmail" string="Gmail" domain="[('source', '=', 'gmail')]"/>
+                <filter name="outlook" string="Outlook" domain="[('source', '=', 'outlook')]"/>
+                <group>
+                    <filter name="group_status" string="Status" context="{'group_by': 'status'}"/>
+                    <filter name="group_source" string="Source" context="{'group_by': 'source'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <menuitem id="smart_ordering_menu_root"
+        name="Smart Ordering"
+        sequence="90"/>
+
+    <menuitem id="smart_ordering_menu_orders"
+        name="Orders"
+        parent="smart_ordering_menu_root"
+        action="smart_order_action"
+        sequence="10"/>
+
+</odoo>

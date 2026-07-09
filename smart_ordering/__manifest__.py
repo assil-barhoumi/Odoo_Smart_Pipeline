@@ -6,6 +6,7 @@
     'depends': ['mail', 'sale'],
     'data': [
         'security/ir.model.access.csv',
+        'views/order_views.xml',
     ],
     'installable': True,
     'auto_install': False,
