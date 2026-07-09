@@ -13,6 +13,6 @@ def acquire_emails(env):
     conn.login(user, password)
     conn.select('INBOX')
     try:
-        process_emails(conn, env, ORDER_KEYWORDS, create_order_record, source='Gmail')
+        process_emails(conn, env, ORDER_KEYWORDS, create_order_record, fetch_attachments=True, source='Gmail')
     finally:
         conn.logout()

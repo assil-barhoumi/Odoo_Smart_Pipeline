@@ -1,3 +1,4 @@
+import base64
 import json
 import logging
 
@@ -5,6 +6,7 @@ from odoo import models, fields
 from odoo.addons.smart_ordering.utils.llm_utils import extract_order
 from odoo.addons.smart_ordering.utils.gmail_utils import acquire_emails
 from odoo.addons.smart_ordering.utils.outlook_utils import acquire_emails_outlook
+from odoo.addons.smart_ordering.utils.attachment_utils import extract_text_from_attachment
 
 
 _logger = logging.getLogger(__name__)
@@ -29,6 +31,7 @@ class SmartOrder(models.Model):
         ('gmail', 'Gmail'),
         ('outlook', 'Outlook'),
     ], string='Source', readonly=True)
+    message_id = fields.Char(string='Message-ID', readonly=True, index=True)
     status = fields.Selection([
         ('pending', 'Pending'),
         ('extracted', 'Extracted'),
@@ -110,7 +113,20 @@ class SmartOrder(models.Model):
         api_key = self.env['ir.config_parameter'].sudo().get_param('smart_ordering.groq_api_key')
         for record in self:
             try:
-                result = extract_order(record.email_body, api_key)
+                content = None
+                attachments = self.env['ir.attachment'].sudo().search([
+                    ('res_model', '=', 'smart.order'),
+                    ('res_id', '=', record.id),
+                ])
+                for att in attachments:
+                    text = extract_text_from_attachment(att.name, base64.b64decode(att.datas))
+                    if text:
+                        content = text
+                        _logger.info('smart_ordering: extracting from attachment %r for record %d', att.name, record.id)
+                        break
+                if not content:
+                    content = record.email_body
+                result = extract_order(content, api_key)
                 record.sudo().write({
                     'extracted_json': json.dumps(result),
                     'confidence': result.get('confidence', 0.0),
