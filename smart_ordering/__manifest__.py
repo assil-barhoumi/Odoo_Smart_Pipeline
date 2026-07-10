@@ -7,6 +7,7 @@
     'data': [
         'security/ir.model.access.csv',
         'views/order_views.xml',
+        'data/cron.xml',
     ],
     'installable': True,
     'auto_install': False,

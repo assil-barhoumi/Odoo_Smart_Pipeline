@@ -64,6 +64,7 @@ class SmartOrder(models.Model):
             self._acquire_emails()
         except Exception as e:
             _logger.error('smart_ordering: acquisition failed: %s', e)
+        self.env.invalidate_all()
         self.search([('status', '=', 'pending')])._run_extraction()
         self.search([('status', '=', 'extracted')])._push_to_erp()
 
@@ -89,7 +90,7 @@ class SmartOrder(models.Model):
                 order = self.env['sale.order'].sudo().create({
                     'partner_id': partner.id,
                     'origin': f'Smart Order #{record.id}',
-                    'user_id': record.create_uid.id,
+                    'user_id': self.env.ref('base.user_admin').id,
                 })
                 for item in extracted.get('line_items', []):
                     self.env['sale.order.line'].sudo().create({
