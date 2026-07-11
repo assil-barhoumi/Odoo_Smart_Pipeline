@@ -1,4 +1,10 @@
+import logging
+
 from odoo import models, fields
+from odoo.addons.smart_billing.utils.gmail_utils import acquire_emails
+from odoo.addons.smart_billing.utils.outlook_utils import acquire_emails_outlook
+
+_logger = logging.getLogger(__name__)
 
 class SmartInvoice(models.Model):
     _name = 'smart.invoice'
@@ -41,3 +47,14 @@ class SmartInvoice(models.Model):
         readonly=True,
         ondelete='set null',
     )
+
+    def _acquire_emails(self):
+        try:
+            acquire_emails(self.env)
+        except Exception as e:
+            _logger.error('smart_billing: Gmail acquisition failed: %s', e)
+        try:
+            acquire_emails_outlook(self.env)
+        except Exception as e:
+            _logger.error('smart_billing: Outlook acquisition failed: %s', e)
+
