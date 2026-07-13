@@ -1,8 +1,11 @@
+import base64
+import json
 import logging
 
 from odoo import models, fields
 from odoo.addons.smart_billing.utils.gmail_utils import acquire_emails
 from odoo.addons.smart_billing.utils.outlook_utils import acquire_emails_outlook
+from odoo.addons.smart_billing.utils.llm_utils import extract_invoice
 
 _logger = logging.getLogger(__name__)
 
@@ -34,11 +37,14 @@ class SmartInvoice(models.Model):
     currency_code = fields.Char(string='Currency')
 
     confidence = fields.Float(string='Confidence', readonly=True)
+    extracted = fields.Boolean(string='Extracted', default=False, readonly=True)
+    extracted_error = fields.Char(string='Extraction Error', readonly=True)
     extracted_json = fields.Text(string='Extracted Data', readonly=True)
 
     status = fields.Selection([
-        ('pending', 'Pending Review'),
-        ('pushed', 'Pushed'),
+        ('pending', 'Pending'),
+        ('extracted', 'Extracted'),
+        ('validated', 'Validated'),
         ('rejected', 'Rejected'),
     ], string='Status', default='pending', required=True, tracking=True, index=True)
     move_id = fields.Many2one(
@@ -57,4 +63,44 @@ class SmartInvoice(models.Model):
             acquire_emails_outlook(self.env)
         except Exception as e:
             _logger.error('smart_billing: Outlook acquisition failed: %s', e)
+
+    def _run_extraction(self):
+        api_key = self.env['ir.config_parameter'].sudo().get_param('smart_billing.groq_api_key')
+        if not api_key:
+            _logger.error('smart_billing: groq_api_key not configured')
+            return
+
+        pending = self.sudo().search([('status', '=', 'pending'), ('extracted', '=', False)])
+        for invoice in pending:
+            try:
+                attachment = self.env['ir.attachment'].sudo().search([
+                    ('res_model', '=', 'smart.invoice'),
+                    ('res_id', '=', invoice.id),
+                ], limit=1)
+                if not attachment:
+                    continue
+
+                data = base64.b64decode(attachment.datas)
+                result = extract_invoice(data, attachment.name, api_key)
+
+                invoice.sudo().write({
+                    'supplier_name': result.get('supplier_name'),
+                    'supplier_street': result.get('supplier_street'),
+                    'supplier_country': result.get('supplier_country'),
+                    'invoice_number': result.get('invoice_number'),
+                    'invoice_date': result.get('date'),
+                    'total_ht': result.get('total_ht'),
+                    'vat_amount': result.get('vat_amount'),
+                    'total_ttc': result.get('total_ttc'),
+                    'currency_code': result.get('currency'),
+                    'confidence': result.get('confidence', 0.0),
+                    'extracted': True,
+                    'extracted_error': False,
+                    'extracted_json': json.dumps(result, ensure_ascii=False),
+                    'status': 'extracted',
+                })
+                _logger.info('smart_billing: extracted %s confidence=%.2f', invoice.file_name, result.get('confidence', 0.0))
+            except Exception as e:
+                _logger.error('smart_billing: extraction failed for %s: %s', invoice.file_name, e)
+                invoice.sudo().write({'extracted_error': str(e)})
 
