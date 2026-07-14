@@ -9,6 +9,19 @@ from odoo.addons.smart_billing.utils.llm_utils import extract_invoice
 
 _logger = logging.getLogger(__name__)
 
+
+class SmartInvoiceLine(models.Model):
+    _name = 'smart.invoice.line'
+    _description = 'Smart Invoice Line'
+
+    invoice_id = fields.Many2one('smart.invoice', ondelete='cascade', required=True)
+    description = fields.Char()
+    quantity = fields.Float(digits=(16, 4))
+    unit_price = fields.Float(digits=(16, 4))
+    total_line = fields.Float(digits=(16, 4))
+    item_type = fields.Char()
+
+
 class SmartInvoice(models.Model):
     _name = 'smart.invoice'
     _inherit = ['mail.thread', 'mail.activity.mixin']
@@ -35,6 +48,7 @@ class SmartInvoice(models.Model):
     vat_amount = fields.Float(string='VAT Amount', digits=(16, 3))
     total_ttc = fields.Float(string='Total TTC', digits=(16, 3))
     currency_code = fields.Char(string='Currency')
+    line_ids = fields.One2many('smart.invoice.line', 'invoice_id', string='Line Items')
 
     confidence = fields.Float(string='Confidence', readonly=True)
     extracted = fields.Boolean(string='Extracted', default=False, readonly=True)
@@ -83,6 +97,15 @@ class SmartInvoice(models.Model):
                 data = base64.b64decode(attachment.datas)
                 result = extract_invoice(data, attachment.name, api_key)
 
+                line_items = result.get('line_items') or []
+                line_cmds = [(0, 0, {
+                    'description': item.get('description') or '',
+                    'quantity': float(item.get('quantity') or 1.0),
+                    'unit_price': float(item.get('unit_price') or 0.0),
+                    'total_line': float(item.get('total_line') or 0.0),
+                    'item_type': item.get('item_type') or '',
+                }) for item in line_items]
+
                 invoice.sudo().write({
                     'supplier_name': result.get('supplier_name'),
                     'supplier_street': result.get('supplier_street'),
@@ -98,6 +121,7 @@ class SmartInvoice(models.Model):
                     'extracted_error': False,
                     'extracted_json': json.dumps(result, ensure_ascii=False),
                     'status': 'extracted',
+                    'line_ids': line_cmds,
                 })
                 _logger.info('smart_billing: extracted %s confidence=%.2f', invoice.file_name, result.get('confidence', 0.0))
             except Exception as e:
