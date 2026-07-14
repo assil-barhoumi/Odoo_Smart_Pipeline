@@ -91,6 +91,67 @@
         </field>
     </record>
 
+    <record id="smart_invoice_form_view" model="ir.ui.view">
+        <field name="name">smart.invoice.form</field>
+        <field name="model">smart.invoice</field>
+        <field name="arch" type="xml">
+            <form string="Smart Invoice">
+                <header>
+                    <field name="status" widget="statusbar" statusbar_visible="pending,extracted,validated"/>
+                </header>
+                <sheet>
+                    <group>
+                        <field name="source"/>
+                        <field name="sender_email"/>
+                        <field name="received_at"/>
+                        <field name="file_name"/>
+                        <field name="confidence" widget="progressbar"/>
+                        <field name="move_id" invisible="not move_id"/>
+                    </group>
+
+                    <field name="extracted_error" invisible="not extracted_error" widget="text"
+                        class="text-danger"/>
+
+                    <div invisible="status != 'pending'" class="alert alert-info" role="alert">
+                        This invoice has been received but not yet extracted. Data will appear here once the extraction pipeline processes it.
+                    </div>
+
+                    <div invisible="status == 'pending'" class="o_sb_side_by_side">
+                        <div class="o_sb_img_col">
+                            <div class="o_sb_col_title">Invoice Preview</div>
+                            <field name="invoice_file" widget="pdf_viewer" nolabel="1" invisible="not is_pdf"/>
+                            <field name="invoice_file" widget="image" nolabel="1" invisible="is_pdf"/>
+                        </div>
+                        <div class="o_sb_fields_col">
+                            <div class="o_sb_col_title">Invoice Details</div>
+                            <group>
+                                <field name="supplier_name" string="Supplier"/>
+                                <field name="supplier_street" string="Address"/>
+                                <field name="supplier_country" string="Country"/>
+                                <field name="invoice_number" string="Invoice #"/>
+                                <field name="invoice_date" string="Date"/>
+                                <field name="currency_code" string="Currency"/>
+                                <field name="total_ht" string="Total HT"/>
+                                <field name="vat_amount" string="VAT"/>
+                                <field name="total_ttc" string="Total TTC"/>
+                            </group>
+                            <field name="line_ids" string="Line Items">
+                                <list editable="bottom">
+                                    <field name="description"/>
+                                    <field name="quantity"/>
+                                    <field name="unit_price" string="Unit Price"/>
+                                    <field name="total_line" string="Total"/>
+                                    <field name="item_type" string="Type"/>
+                                </list>
+                            </field>
+                        </div>
+                    </div>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
     <record id="smart_invoice_action" model="ir.actions.act_window">
         <field name="name">Smart Invoices</field>
         <field name="res_model">smart.invoice</field>

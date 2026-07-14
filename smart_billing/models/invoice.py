@@ -2,7 +2,7 @@ import base64
 import json
 import logging
 
-from odoo import models, fields
+from odoo import api, models, fields
 from odoo.addons.smart_billing.utils.gmail_utils import acquire_emails
 from odoo.addons.smart_billing.utils.outlook_utils import acquire_emails_outlook
 from odoo.addons.smart_billing.utils.llm_utils import extract_invoice
@@ -38,6 +38,8 @@ class SmartInvoice(models.Model):
     message_id = fields.Char(string='Message-ID', readonly=True, index=True)
     file_name = fields.Char(string='Attachment', required=True, readonly=True)
     file_hash = fields.Char(string='File Hash', readonly=True, index=True)
+    invoice_file = fields.Binary(string='Invoice Preview', readonly=True, attachment=True)
+    is_pdf = fields.Boolean(string='Is PDF', compute='_compute_is_pdf', store=True)
 
     supplier_name = fields.Char(string='Supplier')
     supplier_street = fields.Char(string='Supplier Address')
@@ -51,7 +53,6 @@ class SmartInvoice(models.Model):
     line_ids = fields.One2many('smart.invoice.line', 'invoice_id', string='Line Items')
 
     confidence = fields.Float(string='Confidence', readonly=True)
-    extracted = fields.Boolean(string='Extracted', default=False, readonly=True)
     extracted_error = fields.Char(string='Extraction Error', readonly=True)
     extracted_json = fields.Text(string='Extracted Data', readonly=True)
 
@@ -67,6 +68,11 @@ class SmartInvoice(models.Model):
         readonly=True,
         ondelete='set null',
     )
+
+    @api.depends('file_name')
+    def _compute_is_pdf(self):
+        for rec in self:
+            rec.is_pdf = bool(rec.file_name) and rec.file_name.lower().endswith('.pdf')
 
     def _acquire_emails(self):
         try:
@@ -84,7 +90,7 @@ class SmartInvoice(models.Model):
             _logger.error('smart_billing: groq_api_key not configured')
             return
 
-        pending = self.sudo().search([('status', '=', 'pending'), ('extracted', '=', False)])
+        pending = self.sudo().search([('status', '=', 'pending')])
         for invoice in pending:
             try:
                 attachment = self.env['ir.attachment'].sudo().search([
@@ -107,6 +113,7 @@ class SmartInvoice(models.Model):
                 }) for item in line_items]
 
                 invoice.sudo().write({
+                    'invoice_file': attachment.datas,
                     'supplier_name': result.get('supplier_name'),
                     'supplier_street': result.get('supplier_street'),
                     'supplier_country': result.get('supplier_country'),
@@ -117,7 +124,6 @@ class SmartInvoice(models.Model):
                     'total_ttc': result.get('total_ttc'),
                     'currency_code': result.get('currency'),
                     'confidence': result.get('confidence', 0.0),
-                    'extracted': True,
                     'extracted_error': False,
                     'extracted_json': json.dumps(result, ensure_ascii=False),
                     'status': 'extracted',
