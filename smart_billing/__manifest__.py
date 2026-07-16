@@ -7,6 +7,7 @@
     'data': [
         'security/ir.model.access.csv',
         'views/invoice_views.xml',
+        'data/cron.xml',
     ],
     'assets': {
         'web.assets_backend': [

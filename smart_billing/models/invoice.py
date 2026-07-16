@@ -84,6 +84,14 @@ class SmartInvoice(models.Model):
         except Exception as e:
             _logger.error('smart_billing: Outlook acquisition failed: %s', e)
 
+    def _run_pipeline(self):
+        try:
+            self._acquire_emails()
+        except Exception as e:
+            _logger.error('smart_billing: acquisition failed: %s', e)
+        self.env.invalidate_all()
+        self._run_extraction()
+
     def _run_extraction(self):
         api_key = self.env['ir.config_parameter'].sudo().get_param('smart_billing.groq_api_key')
         if not api_key:
