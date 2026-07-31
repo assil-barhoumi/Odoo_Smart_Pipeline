@@ -3,6 +3,7 @@ import json
 import logging
 
 from odoo import api, models, fields
+from odoo.exceptions import ValidationError
 from odoo.addons.smart_billing.utils.gmail_utils import acquire_emails
 from odoo.addons.smart_billing.utils.outlook_utils import acquire_emails_outlook
 from odoo.addons.smart_billing.utils.llm_utils import extract_invoice
@@ -141,4 +142,77 @@ class SmartInvoice(models.Model):
             except Exception as e:
                 _logger.error('smart_billing: extraction failed for %s: %s', invoice.file_name, e)
                 invoice.sudo().write({'extracted_error': str(e)})
+
+    def _get_or_create_partner(self):
+        self.ensure_one()
+        partner = self.env['res.partner'].sudo().search([('name', '=ilike', self.supplier_name)], limit=1)
+        if partner:
+            return partner
+
+        country = False
+        if self.supplier_country:
+            country = self.env['res.country'].sudo().search([('name', 'ilike', self.supplier_country)], limit=1)
+
+        return self.env['res.partner'].sudo().create({
+            'name': self.supplier_name,
+            'supplier_rank': 1,
+            'street': self.supplier_street or False,
+            'country_id': country.id if country else False,
+            'email': self.sender_email or False,
+        })
+
+    def _build_invoice_lines(self):
+        self.ensure_one()
+        account = self.env['account.account'].sudo().search(
+            [('account_type', 'in', ['expense', 'expense_direct_cost'])], limit=1
+        )
+        account_id = account.id if account else False
+
+        def make_line(name, qty=1.0, price=0.0):
+            line = {'name': name, 'quantity': qty, 'price_unit': price}
+            if account_id:
+                line['account_id'] = account_id
+            return (0, 0, line)
+
+        return [make_line(
+            l.description or 'Item',
+            l.quantity or 1.0,
+            l.unit_price or 0.0,
+        ) for l in self.line_ids]
+
+    def action_validate(self):
+        moves = self.env['account.move']
+        for rec in self.filtered(lambda r: r.status == 'extracted'):
+            try:
+                if not rec.supplier_name:
+                    raise ValidationError('No supplier name to create partner.')
+                invoice_lines = rec._build_invoice_lines()
+                if not invoice_lines:
+                    raise ValidationError('Cannot validate invoice without line items.')
+                partner = rec._get_or_create_partner()
+                move = self.env['account.move'].sudo().create({
+                    'move_type': 'in_invoice',
+                    'partner_id': partner.id,
+                    'ref': rec.invoice_number,
+                    'invoice_date': rec.invoice_date,
+                    'invoice_line_ids': invoice_lines,
+                    'narration': f'Smart Billing | {rec.file_name}',
+                })
+                rec.sudo().write({'status': 'validated', 'move_id': move.id, 'extracted_error': False})
+                moves |= move
+            except Exception as e:
+                rec.sudo().write({'extracted_error': str(e)})
+
+        if moves:
+            return {
+                'type': 'ir.actions.act_window',
+                'res_model': 'account.move',
+                'res_id': moves.id if len(moves) == 1 else False,
+                'res_ids': moves.ids,
+                'view_mode': 'form' if len(moves) == 1 else 'list,form',
+                'target': 'current',
+            }
+
+    def action_reject(self):
+        self.filtered(lambda r: r.status not in ('validated', 'rejected')).sudo().write({'status': 'rejected'})
 
