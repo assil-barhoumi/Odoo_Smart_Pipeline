@@ -65,6 +65,30 @@ def create_order_record(env, data):
             'res_id': order.id,
         })
         _logger.info('smart_ordering [%s]: saved attachment %r', data['source'], att['filename'])
+    _send_confirmation_email(env, order)
+
+
+def _send_confirmation_email(env, order):
+    company_email = env.company.email
+    if not company_email:
+        _logger.warning('smart_ordering: cannot send confirmation email to %r: no company email configured', order.sender_email)
+        return
+    company_name = env.company.name
+    try:
+        env['mail.mail'].sudo().create({
+            'subject': f'Re: {order.name}',
+            'body_html': (
+                '<p>Hello,</p>'
+                '<p>We have received your order request and it has been logged for review by our team.</p>'
+                '<p>We will follow up if any additional information is needed to process your order.</p>'
+                f'<p>Best regards,<br/>{company_name}</p>'
+            ),
+            'email_from': company_email,
+            'email_to': order.sender_email,
+        }).send()
+        _logger.info('smart_ordering: confirmation email sent to %r', order.sender_email)
+    except Exception as e:
+        _logger.warning('smart_ordering: failed to send confirmation email to %r: %s', order.sender_email, e)
 
 
 def process_emails(conn, env, keywords, create_fn, fetch_body=True, fetch_attachments=False, source=''):

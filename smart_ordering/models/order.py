@@ -49,6 +49,15 @@ class SmartOrder(models.Model):
         ondelete='set null',
     )
 
+    def action_run_extraction(self):
+        self._run_extraction()
+
+    def action_push_to_erp(self):
+        self._push_to_erp()
+
+    def action_reset_to_pending(self):
+        self.write({'status': 'pending', 'error_message': False})
+
     def _acquire_emails(self):
         try:
             acquire_emails(self.env)
