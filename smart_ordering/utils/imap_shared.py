@@ -91,7 +91,8 @@ def _send_confirmation_email(env, order):
         _logger.warning('smart_ordering: failed to send confirmation email to %r: %s', order.sender_email, e)
 
 
-def process_emails(conn, env, keywords, create_fn, fetch_body=True, fetch_attachments=False, source=''):
+def process_emails(conn, env, keywords, create_fn, fetch_body=True, fetch_attachments=False, source='', own_addresses=None):
+    own_addresses = own_addresses or set()
     _, data = conn.search(None, 'UNSEEN')
     for eid in data[0].split():
         try:
@@ -103,6 +104,10 @@ def process_emails(conn, env, keywords, create_fn, fetch_body=True, fetch_attach
             _, msg_data = conn.fetch(eid, '(BODY.PEEK[])')
             msg = email.message_from_bytes(msg_data[0][1])
             _, sender = email.utils.parseaddr(msg.get('From', ''))
+            if sender.lower() in own_addresses:
+                _logger.info('smart_ordering [%s]: SKIPPING self-sent email (sender=%r matches our own configured address) subject=%r', source, sender, subject)
+                conn.store(eid, '+FLAGS', '\\Seen')
+                continue
             dt = email.utils.parsedate_to_datetime(msg.get('Date', ''))
             received_at = dt.astimezone(timezone.utc).replace(tzinfo=None)
             message_id = msg.get('Message-ID', '').strip()

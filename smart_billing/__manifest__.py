@@ -7,6 +7,7 @@
     'data': [
         'security/ir.model.access.csv',
         'views/invoice_views.xml',
+        'views/mail_account_views.xml',
         'data/cron.xml',
     ],
     'assets': {

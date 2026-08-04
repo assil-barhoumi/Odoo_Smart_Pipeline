@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="smart_billing_mail_account_list_view" model="ir.ui.view">
+        <field name="name">smart.billing.mail.account.list</field>
+        <field name="model">smart.billing.mail.account</field>
+        <field name="arch" type="xml">
+            <list string="Gmail Accounts">
+                <field name="name"/>
+                <field name="email"/>
+                <field name="server"/>
+                <field name="active" widget="boolean_toggle"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="smart_billing_mail_account_form_view" model="ir.ui.view">
+        <field name="name">smart.billing.mail.account.form</field>
+        <field name="model">smart.billing.mail.account</field>
+        <field name="arch" type="xml">
+            <form string="Gmail Account">
+                <sheet>
+                    <group>
+                        <field name="name"/>
+                        <field name="email"/>
+                        <field name="server"/>
+                        <field name="port"/>
+                        <field name="password" password="True"/>
+                        <field name="active"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="smart_billing_mail_account_action" model="ir.actions.act_window">
+        <field name="name">Gmail Accounts</field>
+        <field name="res_model">smart.billing.mail.account</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <menuitem id="smart_billing_menu_mail_accounts"
+        name="Gmail Accounts"
+        parent="smart_billing_menu_root"
+        action="smart_billing_mail_account_action"
+        groups="base.group_system"
+        sequence="20"/>
+
+</odoo>
