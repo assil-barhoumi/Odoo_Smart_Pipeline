@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="smart_ordering_outlook_account_list_view" model="ir.ui.view">
+        <field name="name">smart.ordering.outlook.account.list</field>
+        <field name="model">smart.ordering.outlook.account</field>
+        <field name="arch" type="xml">
+            <list string="Outlook Accounts">
+                <field name="name"/>
+                <field name="email"/>
+                <field name="active" widget="boolean_toggle"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="smart_ordering_outlook_account_form_view" model="ir.ui.view">
+        <field name="name">smart.ordering.outlook.account.form</field>
+        <field name="model">smart.ordering.outlook.account</field>
+        <field name="arch" type="xml">
+            <form string="Outlook Account">
+                <sheet>
+                    <div class="d-flex flex-row align-items-center mb16" groups="base.group_system">
+                        <span invisible="not microsoft_outlook_refresh_token" class="badge text-bg-success">
+                            Outlook Token Valid
+                        </span>
+                        <button type="object"
+                            name="open_microsoft_outlook_uri" class="btn-link px-0"
+                            invisible="microsoft_outlook_refresh_token">
+                            <i class="oi oi-arrow-right"/>
+                            Connect your Outlook account
+                        </button>
+                        <button type="object"
+                            name="open_microsoft_outlook_uri" class="btn-link px-0 ms-2"
+                            invisible="not microsoft_outlook_refresh_token">
+                            <i class="fa fa-cog" title="Edit Settings"/>
+                        </button>
+                    </div>
+                    <group>
+                        <field name="name"/>
+                        <field name="email"/>
+                        <field name="active"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="smart_ordering_outlook_account_action" model="ir.actions.act_window">
+        <field name="name">Outlook Accounts</field>
+        <field name="res_model">smart.ordering.outlook.account</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <menuitem id="smart_ordering_menu_outlook_accounts"
+        name="Outlook Accounts"
+        parent="smart_ordering_menu_root"
+        action="smart_ordering_outlook_account_action"
+        groups="base.group_system"
+        sequence="21"/>
+
+</odoo>

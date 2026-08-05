@@ -7,23 +7,16 @@ _logger = logging.getLogger(__name__)
 
 
 def acquire_emails_outlook(env):
-    server = env['fetchmail.server'].sudo().search([
-        ('server_type', '=', 'outlook'),
-        ('active', '=', True),
-    ], limit=1)
-    if not server:
-        return
-    if server.state == 'done':
+    accounts = env['smart.billing.outlook.account'].sudo().search([('active', '=', True)])
+    for account in accounts:
         try:
-            with server.env.cr.savepoint():
-                server.write({'state': 'draft'})
+            auth_string = account._generate_outlook_oauth2_string(account.email)
+            conn = imaplib.IMAP4_SSL('imap.outlook.com', 993, timeout=30)
+            conn.authenticate('XOAUTH2', lambda x: auth_string)
+            conn.select('INBOX')
+            try:
+                process_emails(conn, env, INVOICE_KEYWORDS, create_invoice_record, source='Outlook')
+            finally:
+                conn.logout()
         except Exception as e:
-            _logger.warning('smart_billing: could not reset fetchmail state: %s', e)
-    auth_string = server._generate_outlook_oauth2_string(server.user)
-    conn = imaplib.IMAP4_SSL('imap.outlook.com', 993, timeout=30)
-    conn.authenticate('XOAUTH2', lambda x: auth_string)
-    conn.select('INBOX')
-    try:
-        process_emails(conn, env, INVOICE_KEYWORDS, create_invoice_record, source='Outlook')
-    finally:
-        conn.logout()
+            _logger.error('smart_billing: Outlook acquisition failed for account %r: %s', account.email, e)

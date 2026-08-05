@@ -7,23 +7,19 @@ _logger = logging.getLogger(__name__)
 
 
 def acquire_emails_outlook(env):
-    server = env['fetchmail.server'].sudo().search([
-        ('server_type', '=', 'outlook'),
-        ('active', '=', True),
-    ], limit=1)
-    if not server:
-        return
-    if server.state == 'done':
+    accounts = env['smart.ordering.outlook.account'].sudo().search([('active', '=', True)])
+    own_addresses = {a.email.lower() for a in accounts if a.email}
+    if env.company.email:
+        own_addresses.add(env.company.email.lower())
+    for account in accounts:
         try:
-            with server.env.cr.savepoint():
-                server.write({'state': 'draft'})
+            auth_string = account._generate_outlook_oauth2_string(account.email)
+            conn = imaplib.IMAP4_SSL('imap.outlook.com', 993, timeout=30)
+            conn.authenticate('XOAUTH2', lambda x: auth_string)
+            conn.select('INBOX')
+            try:
+                process_emails(conn, env, ORDER_KEYWORDS, create_order_record, fetch_attachments=True, source='Outlook', own_addresses=own_addresses)
+            finally:
+                conn.logout()
         except Exception as e:
-            _logger.warning('smart_ordering: could not reset fetchmail state: %s', e)
-    auth_string = server._generate_outlook_oauth2_string(server.user)
-    conn = imaplib.IMAP4_SSL('imap.outlook.com', 993, timeout=30)
-    conn.authenticate('XOAUTH2', lambda x: auth_string)
-    conn.select('INBOX')
-    try:
-        process_emails(conn, env, ORDER_KEYWORDS, create_order_record, fetch_attachments=True, source='Outlook')
-    finally:
-        conn.logout()
+            _logger.error('smart_ordering: Outlook acquisition failed for account %r: %s', account.email, e)

@@ -3,11 +3,12 @@
     'version': '19.0.1.0.0',
     'category': 'Accounting',
     'summary': 'Automated invoice intake from email',
-    'depends': ['mail', 'account'],
+    'depends': ['mail', 'account', 'microsoft_outlook'],
     'data': [
         'security/ir.model.access.csv',
         'views/invoice_views.xml',
         'views/mail_account_views.xml',
+        'views/outlook_account_views.xml',
         'data/cron.xml',
     ],
     'assets': {
