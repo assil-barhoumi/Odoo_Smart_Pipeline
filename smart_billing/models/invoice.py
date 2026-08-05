@@ -94,9 +94,9 @@ class SmartInvoice(models.Model):
         self._run_extraction()
 
     def _run_extraction(self):
-        api_key = self.env['ir.config_parameter'].sudo().get_param('smart_billing.groq_api_key')
+        api_key = self.env['ir.config_parameter'].sudo().get_param('smart_billing.mistral_api_key')
         if not api_key:
-            _logger.error('smart_billing: groq_api_key not configured')
+            _logger.error('smart_billing: mistral_api_key not configured')
             return
 
         pending = self.sudo().search([('status', '=', 'pending')])

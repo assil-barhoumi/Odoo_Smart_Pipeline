@@ -1,2 +1,2 @@
-groq
+requests
 pymupdf

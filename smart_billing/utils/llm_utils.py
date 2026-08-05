@@ -2,11 +2,13 @@ import base64
 import json
 import logging
 import os
-import re  
+import re
+
+import requests
 
 _logger = logging.getLogger(__name__)
 
-GROQ_MODEL = 'meta-llama/llama-4-scout-17b-16e-instruct'
+MISTRAL_MODEL = 'mistral-medium-latest'
 
 PROMPT = """You are an expert financial document extraction assistant specialized in invoices.
 
@@ -75,8 +77,6 @@ def _strip_json_fences(text):
 
 
 def extract_invoice(data, filename, api_key):
-    from groq import Groq
-
     ext = os.path.splitext(filename)[1].lower()
     if ext == '.pdf':
         import fitz
@@ -92,21 +92,28 @@ def extract_invoice(data, filename, api_key):
         mime_type = 'image/png'
 
     encoded = base64.b64encode(img_data).decode('utf-8')
-    client = Groq(api_key=api_key)
-    response = client.chat.completions.create(
-        model=GROQ_MODEL,
-        messages=[{
+    payload = {
+        'model': MISTRAL_MODEL,
+        'messages': [{
             'role': 'user',
             'content': [
                 {'type': 'image_url', 'image_url': {'url': f'data:{mime_type};base64,{encoded}'}},
                 {'type': 'text', 'text': PROMPT},
             ],
         }],
-        temperature=0.0,
-        max_tokens=8192,
+        'temperature': 0.0,
+        'max_tokens': 8192,
+    }
+    response = requests.post(
+        'https://api.mistral.ai/v1/chat/completions',
+        headers={'Content-Type': 'application/json', 'Authorization': f'Bearer {api_key}'},
+        json=payload,
+        timeout=90,
     )
+    response.raise_for_status()
+    body = response.json()
 
-    raw = response.choices[0].message.content or ''
+    raw = body['choices'][0]['message']['content'] or ''
     raw = _strip_json_fences(raw)
     start = raw.find('{')
     if start > 0:
@@ -115,6 +122,6 @@ def extract_invoice(data, filename, api_key):
     try:
         result = json.loads(raw)
     except json.JSONDecodeError as e:
-        raise RuntimeError(f'Groq returned invalid JSON: {e}\nRaw: {raw[:300]}')
+        raise RuntimeError(f'Mistral returned invalid JSON: {e}\nRaw: {raw[:300]}')
 
     return result
