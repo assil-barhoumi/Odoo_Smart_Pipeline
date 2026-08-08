@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="smart_billing_settings_default" model="smart.billing.settings">
+    </record>
+</odoo>

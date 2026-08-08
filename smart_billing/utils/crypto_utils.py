@@ -2,6 +2,7 @@ import logging
 import os
 
 from cryptography.fernet import Fernet, InvalidToken
+from odoo import fields
 
 _logger = logging.getLogger(__name__)
 
@@ -38,3 +39,12 @@ def decrypt_secret(value):
         return fernet.decrypt(value.encode()).decode()
     except InvalidToken:
         return value
+
+class EncryptedChar(fields.Char):
+    def convert_to_column(self, value, record, values=None, validate=True):
+        value = super().convert_to_column(value, record, values, validate)
+        return encrypt_secret(value)
+
+    def convert_to_record(self, value, record):
+        value = super().convert_to_record(value, record)
+        return decrypt_secret(value)
