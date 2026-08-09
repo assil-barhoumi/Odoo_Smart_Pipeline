@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="smart_ordering_settings_view_form" model="ir.ui.view">
+        <field name="name">smart.ordering.settings.form</field>
+        <field name="model">smart.ordering.settings</field>
+        <field name="arch" type="xml">
+            <form string="Smart Ordering Settings" create="false" delete="false">
+                <sheet>
+                    <group>
+                        <group>
+                            <div class="text-muted small mb-1" colspan="2">
+                                API key used to extract order details from incoming emails via Groq's LLM.
+                            </div>
+                            <field name="groq_api_key" password="True"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="smart_ordering_settings_action" model="ir.actions.act_window">
+        <field name="name">AI Configuration</field>
+        <field name="res_model">smart.ordering.settings</field>
+        <field name="view_mode">form</field>
+        <field name="res_id" eval="ref('smart_ordering_settings_default')"/>
+    </record>
+
+    <menuitem id="smart_ordering_menu_settings"
+        name="AI Configuration"
+        parent="smart_ordering_menu_root"
+        action="smart_ordering_settings_action"
+        groups="base.group_system"
+        sequence="22"/>
+
+</odoo>

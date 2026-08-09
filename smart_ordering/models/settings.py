@@ -15,6 +15,10 @@ class SmartOrderingSettings(models.Model):
         groups='base.group_system',
     )
 
+    def _compute_display_name(self):
+        for record in self:
+            record.display_name = 'AI Configuration'
+
     def _compute_groq_api_key(self):
         for record in self:
             record.groq_api_key = decrypt_secret(record.groq_api_key_encrypted)
