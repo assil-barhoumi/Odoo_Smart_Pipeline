@@ -5,3 +5,4 @@ access_smart_invoice_line_admin,smart.invoice.line (admin),model_smart_invoice_l
 access_smart_invoice_line_user,smart.invoice.line (user),model_smart_invoice_line,account.group_account_readonly,1,0,0,0
 access_smart_billing_mail_account_system,smart.billing.mail.account.system,model_smart_billing_mail_account,base.group_system,1,1,1,1
 access_smart_billing_outlook_account_system,smart.billing.outlook.account.system,model_smart_billing_outlook_account,base.group_system,1,1,1,1
+access_smart_billing_settings_system,smart.billing.settings.system,model_smart_billing_settings,base.group_system,1,1,1,1

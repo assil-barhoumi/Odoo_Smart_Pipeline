@@ -94,7 +94,8 @@ class SmartInvoice(models.Model):
         self._run_extraction()
 
     def _run_extraction(self):
-        api_key = self.env['ir.config_parameter'].sudo().get_param('smart_billing.mistral_api_key')
+        settings = self.env['smart.billing.settings'].sudo().search([], limit=1)
+        api_key = settings.mistral_api_key if settings else False
         if not api_key:
             _logger.error('smart_billing: mistral_api_key not configured')
             return

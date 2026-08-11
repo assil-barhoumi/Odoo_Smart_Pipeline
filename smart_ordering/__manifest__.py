@@ -9,6 +9,8 @@
         'views/order_views.xml',
         'views/mail_account_views.xml',
         'views/outlook_account_views.xml',
+        'data/settings_data.xml',
+        'views/settings_views.xml',
         'data/cron.xml',
     ],
     'installable': True,

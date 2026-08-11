@@ -120,7 +120,8 @@ class SmartOrder(models.Model):
                 })
 
     def _run_extraction(self):
-        api_key = self.env['ir.config_parameter'].sudo().get_param('smart_ordering.groq_api_key')
+        settings = self.env['smart.ordering.settings'].sudo().search([], limit=1)
+        api_key = settings.groq_api_key if settings else False
         for record in self:
             try:
                 content = None
