@@ -8,6 +8,7 @@
             <search string="Smart Invoices">
                 <field name="supplier_name"/>
                 <field name="invoice_number"/>
+                <field name="message_id" string="Message-ID"/>
                 <filter name="pending" string="Pending" domain="[('status', '=', 'pending')]"/>
                 <filter name="extracted" string="Extracted" domain="[('status', '=', 'extracted')]"/>
                 <filter name="validated" string="Validated" domain="[('status', '=', 'validated')]"/>
@@ -20,6 +21,7 @@
                 <group>
                     <filter name="group_status" string="Status" context="{'group_by': 'status'}"/>
                     <filter name="group_supplier" string="Supplier" context="{'group_by': 'supplier_name'}"/>
+                    <filter name="group_message_id" string="Email" context="{'group_by': 'message_id_short'}"/>
                 </group>
             </search>
         </field>
@@ -111,6 +113,8 @@
                         <field name="sender_email"/>
                         <field name="received_at"/>
                         <field name="file_name"/>
+                        <field name="message_id_short" string="Email Ref"/>
+                        <field name="message_id" invisible="1"/>
                         <field name="confidence" widget="progressbar"/>
                         <field name="move_id" invisible="not move_id"/>
                     </group>

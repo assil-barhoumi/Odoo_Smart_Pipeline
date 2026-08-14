@@ -48,7 +48,8 @@
                             <field name="sender_email"/>
                             <field name="source"/>
                             <field name="received_at"/>
-                            <field name="message_id"/>
+                            <field name="message_id_short" string="Email Ref"/>
+                            <field name="message_id" invisible="1"/>
                         </group>
                         <group string="Processing">
                             <field name="confidence" widget="progressbar"/>
@@ -86,6 +87,7 @@
             <search string="Smart Orders">
                 <field name="name" string="Subject"/>
                 <field name="sender_email" string="Sender"/>
+                <field name="message_id" string="Message-ID"/>
                 <filter name="pending" string="Pending" domain="[('status', '=', 'pending')]"/>
                 <filter name="extracted" string="Extracted" domain="[('status', '=', 'extracted')]"/>
                 <filter name="pushed" string="Pushed" domain="[('status', '=', 'pushed')]"/>
@@ -96,6 +98,7 @@
                 <group>
                     <filter name="group_status" string="Status" context="{'group_by': 'status'}"/>
                     <filter name="group_source" string="Source" context="{'group_by': 'source'}"/>
+                    <filter name="group_message_id" string="Email" context="{'group_by': 'message_id_short'}"/>
                 </group>
             </search>
         </field>

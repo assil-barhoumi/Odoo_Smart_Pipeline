@@ -1,8 +1,9 @@
 import base64
+import hashlib
 import json
 import logging
 
-from odoo import models, fields
+from odoo import api, models, fields
 from odoo.addons.smart_ordering.utils.llm_utils import extract_order
 from odoo.addons.smart_ordering.utils.gmail_utils import acquire_emails
 from odoo.addons.smart_ordering.utils.outlook_utils import acquire_emails_outlook
@@ -32,6 +33,11 @@ class SmartOrder(models.Model):
         ('outlook', 'Outlook'),
     ], string='Source', readonly=True)
     message_id = fields.Char(string='Message-ID', readonly=True, index=True)
+    # Display-only, collision-tolerant hash of message_id. Never use for identity/dedup checks — use message_id instead.
+    message_id_short = fields.Char(
+        string='Email Ref', compute='_compute_message_id_short', store=True,
+        help='Short reference derived from Message-ID, for display only — not a unique identifier.',
+    )
     status = fields.Selection([
         ('pending', 'Pending'),
         ('extracted', 'Extracted'),
@@ -48,6 +54,14 @@ class SmartOrder(models.Model):
         readonly=True,
         ondelete='set null',
     )
+
+    @api.depends('message_id')
+    def _compute_message_id_short(self):
+        for record in self:
+            record.message_id_short = (
+                hashlib.md5(record.message_id.encode()).hexdigest()[:8]
+                if record.message_id else False
+            )
 
     def action_run_extraction(self):
         self._run_extraction()

@@ -1,4 +1,5 @@
 import base64
+import hashlib
 import json
 import logging
 
@@ -37,6 +38,11 @@ class SmartInvoice(models.Model):
         ('outlook', 'Outlook'),
     ], string='Source', readonly=True)
     message_id = fields.Char(string='Message-ID', readonly=True, index=True)
+    # Display-only, collision-tolerant hash of message_id. Never use for identity/dedup checks — use message_id instead.
+    message_id_short = fields.Char(
+        string='Email Ref', compute='_compute_message_id_short', store=True,
+        help='Short reference derived from Message-ID, for display only — not a unique identifier.',
+    )
     file_name = fields.Char(string='Attachment', required=True, readonly=True)
     file_hash = fields.Char(string='File Hash', readonly=True, index=True)
     invoice_file = fields.Binary(string='Invoice Preview', readonly=True, attachment=True)
@@ -74,6 +80,14 @@ class SmartInvoice(models.Model):
     def _compute_is_pdf(self):
         for rec in self:
             rec.is_pdf = bool(rec.file_name) and rec.file_name.lower().endswith('.pdf')
+
+    @api.depends('message_id')
+    def _compute_message_id_short(self):
+        for rec in self:
+            rec.message_id_short = (
+                hashlib.md5(rec.message_id.encode()).hexdigest()[:8]
+                if rec.message_id else False
+            )
 
     def _acquire_emails(self):
         try:
