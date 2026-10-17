@@ -1,6 +1,8 @@
 id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_smart_invoice_system,smart.invoice.system,model_smart_invoice,base.group_system,1,1,1,1
 access_smart_invoice_admin,smart.invoice (admin),model_smart_invoice,account.group_account_invoice,1,1,1,1
 access_smart_invoice_user,smart.invoice (user),model_smart_invoice,account.group_account_readonly,1,0,0,0
+access_smart_invoice_line_system,smart.invoice.line.system,model_smart_invoice_line,base.group_system,1,1,1,1
 access_smart_invoice_line_admin,smart.invoice.line (admin),model_smart_invoice_line,account.group_account_invoice,1,1,1,1
 access_smart_invoice_line_user,smart.invoice.line (user),model_smart_invoice_line,account.group_account_readonly,1,0,0,0
 access_smart_billing_mail_account_system,smart.billing.mail.account.system,model_smart_billing_mail_account,base.group_system,1,1,1,1

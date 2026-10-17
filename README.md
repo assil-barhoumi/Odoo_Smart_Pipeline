@@ -54,7 +54,7 @@ pip install -r smart_billing/requirements.txt
    docker exec odoo19-footer odoo -i smart_ordering,smart_billing -d automating_odoo --stop-after-init
    ```
    - `smart_ordering` depends on `mail`, `sale`, `microsoft_outlook`.
-   - `smart_billing` depends on `mail`, `account`, `microsoft_outlook`.
+   - `smart_billing` depends on `mail`, `account`, `microsoft_outlook`, `base_iban`.
 
 ---
 
@@ -90,6 +90,10 @@ Each module ships its own `ir.cron` job — "Smart Ordering: Run Pipeline" and "
 **`smart_billing`:** invoice arrives → `pending` → `extracted` (LLM ran) → reviewer checks fields against a side-by-side PDF/image preview → **Validate** (creates `account.move`) or **Reject**. Validation is blocked if the supplier name is missing or no line items were extracted.
 
 **`smart_ordering`:** an order email arrives → `pending` → `extracted` (LLM ran) → `pushed` automatically within the same pipeline run, creating a draft `sale.order` (quotation); review happens later, at Odoo's normal quotation confirm stage, same as any manually-entered order.
+
+### 5.1 Email Ref (duplicate-attachment detection)
+
+One email can produce several records (one per attachment). **Email Ref** — a short hash of the `Message-ID`, shown on the form and via **Group By → Email** — flags records from the same email. Display-only, negligible collision risk; the real `Message-ID` (hidden but stored) remains the actual dedup key.
 
 ---
 
