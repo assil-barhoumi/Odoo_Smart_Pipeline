@@ -7,9 +7,9 @@ class SmartBillingSettings(models.Model):
     _name = 'smart.billing.settings'
     _description = 'Smart Billing - Settings'
 
-    mistral_api_key_encrypted = fields.Char(string='Mistral API Key (Encrypted)', groups='base.group_system')
+    mistral_api_key_encrypted = fields.Char(string='Kimi K3 API Key (Encrypted)', groups='base.group_system')
     mistral_api_key = fields.Char(
-        string='Mistral API Key',
+        string='Kimi K3 API Key',
         compute='_compute_mistral_api_key',
         inverse='_inverse_mistral_api_key',
         groups='base.group_system',

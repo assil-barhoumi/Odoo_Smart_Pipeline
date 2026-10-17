@@ -10,7 +10,7 @@
                     <group>
                         <group>
                             <div class="text-muted small mb-1" colspan="2">
-                                API key used to extract invoice details from incoming emails via Mistral's LLM.
+                                API key used to extract invoice details from incoming emails via Kimi K3.
                             </div>
                             <field name="mistral_api_key" password="True"/>
                         </group>
