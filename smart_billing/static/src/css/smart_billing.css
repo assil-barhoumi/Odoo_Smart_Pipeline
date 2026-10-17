@@ -17,6 +17,8 @@
 .o_sb_fields_col {
     flex: 1 1 auto;
     min-width: 0;
+    max-height: 1100px;
+    overflow-y: auto;
 }
 
 .o_sb_col_title {
