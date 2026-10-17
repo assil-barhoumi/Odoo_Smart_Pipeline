@@ -10,9 +10,9 @@
                     <group>
                         <group>
                             <div class="text-muted small mb-1" colspan="2">
-                                API key used to extract order details from incoming emails via Groq's LLM.
+                                API key used to extract order details from incoming emails via Qwen's LLM.
                             </div>
-                            <field name="groq_api_key" password="True"/>
+                            <field name="qwen_api_key" password="True"/>
                         </group>
                     </group>
                 </sheet>

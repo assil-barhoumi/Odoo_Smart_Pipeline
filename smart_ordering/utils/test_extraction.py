@@ -1,4 +1,4 @@
-# run: docker exec -it odoo19-footer python3 /mnt/extra-addons/smart_ordering/utils/test_extraction.py <groq_api_key>
+# run: docker exec -it odoo19-footer python3 /mnt/extra-addons/smart_ordering/utils/test_extraction.py <qwen_api_key>
 
 import sys
 sys.path.insert(0, '/mnt/extra-addons/smart_ordering/utils')
