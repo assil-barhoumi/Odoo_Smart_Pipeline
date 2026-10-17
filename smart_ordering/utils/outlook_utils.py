@@ -18,7 +18,7 @@ def acquire_emails_outlook(env):
             conn.authenticate('XOAUTH2', lambda x: auth_string)
             conn.select('INBOX')
             try:
-                process_emails(conn, env, ORDER_KEYWORDS, create_order_record, fetch_attachments=True, source='Outlook', own_addresses=own_addresses)
+                process_emails(conn, env, ORDER_KEYWORDS, create_order_record, fetch_attachments=True, source='Outlook', own_addresses=own_addresses, recipient_email=account.email)
             finally:
                 conn.logout()
         except Exception as e:

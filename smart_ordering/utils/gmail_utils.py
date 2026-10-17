@@ -17,7 +17,7 @@ def acquire_emails(env):
             conn.login(account.email, account.password)
             conn.select('INBOX')
             try:
-                process_emails(conn, env, ORDER_KEYWORDS, create_order_record, fetch_attachments=True, source='Gmail', own_addresses=own_addresses)
+                process_emails(conn, env, ORDER_KEYWORDS, create_order_record, fetch_attachments=True, source='Gmail', own_addresses=own_addresses, recipient_email=account.email)
             finally:
                 conn.logout()
         except Exception as e:

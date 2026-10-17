@@ -8,6 +8,9 @@ _logger = logging.getLogger(__name__)
 
 def acquire_emails_outlook(env):
     accounts = env['smart.billing.outlook.account'].sudo().search([('active', '=', True)])
+    own_addresses = {a.email.lower() for a in accounts if a.email}
+    if env.company.email:
+        own_addresses.add(env.company.email.lower())
     for account in accounts:
         try:
             auth_string = account._generate_outlook_oauth2_string(account.email)
@@ -15,7 +18,7 @@ def acquire_emails_outlook(env):
             conn.authenticate('XOAUTH2', lambda x: auth_string)
             conn.select('INBOX')
             try:
-                process_emails(conn, env, INVOICE_KEYWORDS, create_invoice_record, source='Outlook')
+                process_emails(conn, env, INVOICE_KEYWORDS, create_invoice_record, source='Outlook', own_addresses=own_addresses, recipient_email=account.email)
             finally:
                 conn.logout()
         except Exception as e:

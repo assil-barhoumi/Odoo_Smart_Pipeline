@@ -30,6 +30,7 @@ def _get_plain_body(msg):
 
 
 def _get_attachments(msg):
+    result = []
     for part in msg.walk():
         raw_filename = part.get_filename()
         if not raw_filename:
@@ -37,11 +38,11 @@ def _get_attachments(msg):
         filename = _decode_subject(raw_filename)
         ext = os.path.splitext(filename)[1].lower()
         if ext not in SUPPORTED_EXTENSIONS:
-            return None
+            continue
         data = part.get_payload(decode=True)
         if data:
-            return [{'filename': filename, 'data': data}]
-    return []
+            result.append({'filename': filename, 'data': data})
+    return result
 
 
 def create_order_record(env, data):
@@ -56,6 +57,7 @@ def create_order_record(env, data):
         'received_at': data['received_at'],
         'source': data['source'].lower(),
         'message_id': data['message_id'],
+        'recipient_email': data.get('recipient_email'),
     })
     for att in data['attachments']:
         env['ir.attachment'].sudo().create({
@@ -69,13 +71,13 @@ def create_order_record(env, data):
 
 
 def _send_confirmation_email(env, order):
-    company_email = env.company.email
+    company_email = order.recipient_email or env.company.email
     if not company_email:
         _logger.warning('smart_ordering: cannot send confirmation email to %r: no company email configured', order.sender_email)
         return
     company_name = env.company.name
     try:
-        env['mail.mail'].sudo().create({
+        mail_values = {
             'subject': f'Re: {order.name}',
             'body_html': (
                 '<p>Hello,</p>'
@@ -85,13 +87,17 @@ def _send_confirmation_email(env, order):
             ),
             'email_from': company_email,
             'email_to': order.sender_email,
-        }).send()
+        }
+        if order.message_id:
+            mail_values['references'] = order.message_id
+            mail_values['headers'] = repr({'In-Reply-To': order.message_id})
+        env['mail.mail'].sudo().create(mail_values).send()
         _logger.info('smart_ordering: confirmation email sent to %r', order.sender_email)
     except Exception as e:
         _logger.warning('smart_ordering: failed to send confirmation email to %r: %s', order.sender_email, e)
 
 
-def process_emails(conn, env, keywords, create_fn, fetch_body=True, fetch_attachments=False, source='', own_addresses=None):
+def process_emails(conn, env, keywords, create_fn, fetch_body=True, fetch_attachments=False, source='', own_addresses=None, recipient_email=None):
     own_addresses = own_addresses or set()
     _, data = conn.search(None, 'UNSEEN')
     for eid in data[0].split():
@@ -112,18 +118,17 @@ def process_emails(conn, env, keywords, create_fn, fetch_body=True, fetch_attach
             received_at = dt.astimezone(timezone.utc).replace(tzinfo=None)
             message_id = msg.get('Message-ID', '').strip()
             attachments = _get_attachments(msg) if fetch_attachments else []
-            if attachments is None:
-                _logger.warning('smart_ordering [%s]: unsupported attachment format, leaving unread: subject=%r', source, subject)
-                continue
-            create_fn(env, {
-                'subject': subject,
-                'sender': sender,
-                'received_at': received_at,
-                'message_id': message_id,
-                'body': _get_plain_body(msg) if fetch_body else '',
-                'attachments': attachments,
-                'source': source,
-            })
+            with env.cr.savepoint():
+                create_fn(env, {
+                    'subject': subject,
+                    'sender': sender,
+                    'received_at': received_at,
+                    'message_id': message_id,
+                    'body': _get_plain_body(msg) if fetch_body else '',
+                    'attachments': attachments,
+                    'source': source,
+                    'recipient_email': recipient_email,
+                })
             env.cr.commit()
             conn.store(eid, '+FLAGS', '\\Seen')
         except Exception as e:
